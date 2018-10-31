@@ -4,6 +4,8 @@
 #include <assert.h>
 #include "io.h"
 
+const int defaultBufferSize = 4096;
+
 int writer_new(int fd, writer_t **p_writer) {
     return writer_new_size(fd, defaultBufferSize, p_writer);
 }
@@ -28,14 +30,14 @@ int writer_new_size(int fd, int size, writer_t **p_writer) {
     return 0;
 }
 
-void writer_delete(writer_t *writer) {
-    if (writer == NULL) {
-        return;
+int writer_delete(writer_t *writer) {
+    if (-1 == writer_flush(writer)) {
+        return -1;
     }
     free(writer->buf);
     free(writer);
+    return 0;
 }
-
 
 inline int min(int a, int b) {
     if (a < b) {
@@ -43,7 +45,6 @@ inline int min(int a, int b) {
     }
     return b;
 }
-
 
 int writer_available(writer_t *writer) {
     return writer->size - writer->len;
