@@ -35,3 +35,45 @@ RocksDB 中描述可以并发insert SkipList ? 这个是怎么实现的
 - 怎么保持不可变状态，这样就不需要每次重头新建索引，加快启动速度。正常的db，肯定都必须做这个事情。
 - 是否考虑多个文件，如果需要整理 wal 的时候，确实多个文件更好。当前只保持一个文件。
 - 现在不支持并行。看看哪些地方需要加锁。
+
+
+## test
+
+10w, 393M
+
+```
+cat wal.data > wal.data.a  0.00s user 0.34s system 37% cpu 0.917 total
+
+~= 430 MB/s
+当前 mac 测试:
+写入 430 MB/s
+读取 1360 MB/s
+```
+
+without hmap
+
+```
+PUT time: 1.012756 s, 9.874046 w/s 
+
+PUT time: 1.104413 s, 9.054583 w/s
+```
+
+hmap 1024
+
+```
+PUT time: 1.212978 s, 8.244172 w/s
+GET time: 2.992105 s, 3.342129 w/s
+
+PUT time: 1.068060 s, 9.362771 w/s
+GET time: 0.730888 s, 13.681984 w/s
+```
+
+hmap 4096
+
+```
+PUT time: 1.048125 s, 9.540846 w/s
+GET time: 0.784400 s, 12.748598 w/s
+
+PUT time: 0.983948 s, 10.163139 w/s
+GET time: 0.868757 s, 11.510698 w/s
+```

@@ -10,7 +10,7 @@ ret_code_t db_init() {
 
 ret_code_t db_open(char *dir, db_t **p_db) {
     hmap_t *hmap;
-    if (-1 == hmap_new(8, &hmap)) {
+    if (-1 == hmap_new(1024, &hmap)) {
         return e_out_of_memory;
     }
     logstore_t *logstore;
@@ -65,9 +65,9 @@ ret_code_t db_put(db_t *db, db_str_t key, db_str_t val) {
     }
 
     free(logrecord.buf);
-    if (-1 == hmap_set(db->hmap, key.data, key.len, offset)) {
-        return e_all;
-    }
+//    if (-1 == hmap_set(db->hmap, key.data, key.len, offset)) {
+//        return e_all;
+//    }
     return e_succ;
 }
 
