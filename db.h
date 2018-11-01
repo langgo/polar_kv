@@ -2,9 +2,12 @@
 #define POLAR_KV_DB_H
 
 #include <unistd.h>
+#include "logstore.h"
+#include "hash_map.h"
 
 typedef struct {
-
+    logstore_t *logstore;
+    hmap_t *hmap;
 } db_t;
 
 typedef struct {
@@ -12,11 +15,11 @@ typedef struct {
     size_t len;
 } db_str_t;
 
-typedef  struct {
+typedef struct {
 
 } visitor_t;
 
-typedef enum  {
+typedef enum {
     e_succ = 0,
     e_not_found = 1,
     e_corruption = 2,
@@ -27,9 +30,10 @@ typedef enum  {
     e_timedOut = 7,
     e_full = 8,
     e_out_of_memory = 9,
+    e_all = 10,
 } ret_code_t;
 
-ret_code_t db_open(char *fname, db_t *db);
+ret_code_t db_open(char *fname, db_t **p_db);
 
 ret_code_t db_close(db_t *db);
 

@@ -7,6 +7,7 @@
 #include "io.h"
 #include "logstore.h"
 #include "hash_map.h"
+#include "db.h"
 
 void exitErr(int code) {
     printf("%s\n", strerror(errno));
@@ -79,6 +80,12 @@ void t_logstore() {
             exit(-1);
         }
         printf("l1: %ld\n", l);
+
+        logrecord_t *logrecord1;
+        if (-1 == logstore_read_record(logstore, l, &logrecord1)) {
+            exitErr(-1);
+        }
+        printf("logrecord: %d %s\n", logrecord1->size, logrecord1->buf);
     }
 
     if (-1 == logstore_delete(logstore)) {
@@ -170,7 +177,44 @@ void t_hmap() {
     hmap_delete(hmap);
 }
 
+
+void t_db() {
+    db_t *db;
+    if (-1 == db_open("/tmp/polar_kv", &db)) {
+        exitErr(-1);
+    }
+
+    {
+        int r = 0;
+        db_str_t key = {
+                .data = "asdf1234",
+                .len = 8,
+        };
+
+        db_str_t val = {
+                .data = "1234asdf",
+                .len = 8,
+        };
+
+        r = db_put(db, key, val);
+        if (r != 0) {
+            printf("db_put: %d\n", r);
+        }
+
+        db_str_t val1;
+        r = db_get(db, key, &val1);
+        if (r != 0) {
+            printf("db_get: %d\n", r);
+        }
+        printf("db_get. val: %ld %s\n", val1.len, val1.data);
+    }
+
+    if (-1 == db_close(db)) {
+        exitErr(-1);
+    }
+}
+
 int main() {
-    t_hmap();
+    t_db();
     printf("%s\n", "hello");
 }

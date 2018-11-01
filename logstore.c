@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 #include "logstore.h"
 #include "coding.h"
 
@@ -36,10 +38,17 @@ int logstore_new(char *dir, logstore_t **p_logstore) {
         return -1;
     }
 
+    // TODO
+    uint8_t *readbuf = malloc(sizeof(uint8_t) * 8 * 1024);
+    if (readbuf == NULL) {
+        return -1;
+    }
+
     logstore_t *logstore = (logstore_t *) malloc(sizeof(logstore_t));
     logstore->fd = fd;
     logstore->writer = writer;
     logstore->next_location = statbuf.st_size;
+    logstore->readbuf = readbuf;
 
     *p_logstore = logstore;
     return 0;
@@ -90,3 +99,53 @@ int logstore_add_record(logstore_t *logstore, logrecord_t logrecord, size_t *p_l
     logstore->next_location += 4 + logrecord.size;
     return 0;
 }
+
+int logstore_read_record(logstore_t *logstore, off_t location, logrecord_t *logrecord) {
+    int rfd = logstore->fd;
+
+    // TODO 如果能够知道value的长度，就不需要多读了。
+    int size = readBufferCache;
+    while (size > 0) {
+        ssize_t n = pread(rfd, logstore->readbuf, size, location);
+        if (n == -1) {
+            return -1;
+        }
+        if (n == 0) {
+            break;
+        }
+        size -= n;
+        location += n;
+    }
+
+    // 解析 record 的长度
+
+    uint32_t length = decode_fixed32(logstore->readbuf);
+
+    char *content = malloc(sizeof(char) * length);
+    if (content == NULL) {
+        return -1;
+    }
+
+    int bufrealsize = length > readBufferCache - 4 ? readBufferCache - 4 : length;
+    memcpy(content, logstore->readbuf + 4, bufrealsize);
+
+    int remain = length - bufrealsize;
+    while (remain > 0) {
+        ssize_t n = pread(rfd, content + bufrealsize, remain, location);
+        if (n == -1) {
+            return -1;
+        }
+        if (n == 0) {
+            break;
+        }
+        remain -= n;
+        location += n;
+    }
+    assert(remain == 0);
+
+    logrecord->size = length;
+    logrecord->buf = content;
+
+    return 0;
+}
+
