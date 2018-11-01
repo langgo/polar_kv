@@ -29,13 +29,16 @@ https://zhuanlan.zhihu.com/p/35925589
 
 RocksDB 中描述可以并发insert SkipList ? 这个是怎么实现的
 
+- hmap 去除8B的假设，考虑内存的释放。
+- db reload 和 db 索引的存储
+
 ## mark
 
 - 不进行 rehash，hash 阶段不需要锁
 - 怎么保持不可变状态，这样就不需要每次重头新建索引，加快启动速度。正常的db，肯定都必须做这个事情。
 - 是否考虑多个文件，如果需要整理 wal 的时候，确实多个文件更好。当前只保持一个文件。
 - 现在不支持并行。看看哪些地方需要加锁。
-
+- 去锁，异步，零拷贝，复用，批量
 
 ## test
 
@@ -46,8 +49,8 @@ cat wal.data > wal.data.a  0.00s user 0.34s system 37% cpu 0.917 total
 
 ~= 430 MB/s
 当前 mac 测试:
-写入 430 MB/s
-读取 1360 MB/s
+写入 430 MB/s   x5
+读取 1360 MB/s  x2
 ```
 
 without hmap
