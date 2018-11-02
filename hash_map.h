@@ -1,6 +1,10 @@
 #ifndef POLAR_KV_HASH_MAP_H
 #define POLAR_KV_HASH_MAP_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <unistd.h>
 
 #ifndef HMAP_ITEM_SIZE
@@ -35,5 +39,9 @@ void hmap_delete(hmap_t *hmap);
 int hmap_set(hmap_t *hmap, char *key, uint16_t key_len, uint64_t value);
 
 int hmap_get(hmap_t *hmap, char *key, uint16_t key_len, uint64_t *p_value);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //POLAR_KV_HASH_MAP_H

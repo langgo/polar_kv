@@ -1,6 +1,10 @@
 #ifndef POLAR_KV_LOGSTORE_H
 #define POLAR_KV_LOGSTORE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // TODO 考虑按块写入
 
 #include "io.h"
@@ -40,5 +44,9 @@ int logstore_iter_new(logstore_t *logstore, size_t buf_size, logstore_iter_t **p
 void logstore_iter_delete(logstore_iter_t *iter);
 
 int logstore_iter_next(logstore_iter_t *iter, logrecord_t *p_record, uint64_t *p_location);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //POLAR_KV_LOGSTORE_H

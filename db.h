@@ -1,6 +1,10 @@
 #ifndef POLAR_KV_DB_H
 #define POLAR_KV_DB_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <unistd.h>
 #include "logstore.h"
 #include "hash_map.h"
@@ -43,5 +47,9 @@ ret_code_t db_put(db_t *db, db_str_t key, db_str_t val);
 ret_code_t db_get(db_t *db, db_str_t key, db_str_t *val);
 
 ret_code_t db_range(db_t *db, db_str_t lower, db_str_t ipper, visitor_t *visitor);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //POLAR_KV_DB_H
