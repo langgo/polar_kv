@@ -20,17 +20,17 @@ typedef struct {
 } visitor_t;
 
 typedef enum {
-    e_succ = 0,
-    e_not_found = 1,
-    e_corruption = 2,
-    e_not_supported = 3,
-    e_invalid_argument = 4,
-    e_io_error = 5,
-    e_incomplete = 6,
-    e_timedOut = 7,
-    e_full = 8,
-    e_out_of_memory = 9,
-    e_all = 10,
+    k_succ = 0,
+    k_not_found = 1,
+    k_corruption = 2,
+    k_not_supported = 3,
+    k_invalid_argument = 4,
+    k_io_error = 5,
+    k_incomplete = 6,
+    k_timedOut = 7,
+    k_full = 8,
+    k_out_of_memory = 9,
+    k_all = 10,
 } ret_code_t;
 
 ret_code_t db_open(char *fname, db_t **p_db);

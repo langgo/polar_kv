@@ -67,8 +67,8 @@ void hmap_delete(hmap_t *hmap) {
     free(hmap);
 }
 
-static void hmap_g(hmap_t *hmap, char *key, int key_len, uint64_t value,
-                   int *p_index, uint8_t *p_top, uint64_t *p_nkey, uint64_t *p_nval) {
+static int hmap_g(hmap_t *hmap, char *key, int key_len, uint64_t value,
+                  int *p_index, uint8_t *p_top, uint64_t *p_nkey, uint64_t *p_nval) {
 
     uint64_t hash = siphash(key, key_len, seed);
     int index = (int) (hash & hmap->sizemask);
@@ -87,9 +87,13 @@ static void hmap_g(hmap_t *hmap, char *key, int key_len, uint64_t value,
             uint64_t tmp = (uint64_t) key[i];
             nkey = nkey | (tmp << 8 * i);
         }
-        // free(key); // free
     } else {
-        nkey = (uint64_t) key;
+        char *key1 = malloc(sizeof(char) * key_len);
+        if (key1 == NULL) {
+            return -1;
+        }
+        memcpy(key1, key, key_len);
+        nkey = (uint64_t) key1;
     }
 
     *p_index = index;
@@ -98,6 +102,7 @@ static void hmap_g(hmap_t *hmap, char *key, int key_len, uint64_t value,
     if (p_nval != NULL) {
         *p_nval = (uint64_t) (key_len) << 48 | value; // 16 + 48;
     }
+    return 0;
 }
 
 int hmap_set(hmap_t *hmap, char *key, int key_len, uint64_t value) {

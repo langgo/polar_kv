@@ -81,11 +81,11 @@ void t_logstore() {
         }
         printf("l1: %ld\n", l);
 
-        logrecord_t *logrecord1;
+        logrecord_t logrecord1;
         if (-1 == logstore_read_record(logstore, l, &logrecord1)) {
             exitErr(-1);
         }
-        printf("logrecord: %d %s\n", logrecord1->size, logrecord1->buf);
+        printf("logrecord: %d %s\n", logrecord1.size, logrecord1.buf);
     }
 
     if (-1 == logstore_delete(logstore)) {
@@ -125,7 +125,7 @@ void t_hmap() {
         if (r == -1) {
             exitErr(-1);
         }
-        printf("hmap_get: %d\n", nval);
+        printf("hmap_get: %lld\n", nval);
     }
 
     {
@@ -152,7 +152,7 @@ void t_hmap() {
                 printf("1. not equal. i: %d\n", i);
                 exit(-1);
             }
-            printf("val: %d\n", val);
+            printf("val: %lld\n", val);
         }
 
         for (int i = 0; i < 10; ++i) {
@@ -168,7 +168,7 @@ void t_hmap() {
                 exit(-1);
             }
             if (val != i * 2) {
-                printf("2. not equal. i: %d, val: %ld\n", i, val);
+                printf("2. not equal. i: %d, val: %lld\n", i, val);
                 exit(-1);
             }
         }
@@ -179,7 +179,7 @@ void t_hmap() {
 
 void t_db() {
     db_t *db;
-    if (-1 == db_open("/tmp/polar_kv", &db)) {
+    if (k_succ == db_open("/tmp/polar_kv", &db)) {
         exitErr(-1);
     }
 
@@ -208,12 +208,48 @@ void t_db() {
         printf("db_get. val: %ld %s\n", val1.len, val1.data);
     }
 
-    if (-1 == db_close(db)) {
+    if (k_succ == db_close(db)) {
+        exitErr(-1);
+    }
+}
+
+void t_db_reload() {
+    db_t *db;
+    if (k_succ != db_open("/tmp/polar_kv", &db)) {
+        exitErr(-1);
+    }
+
+    {
+        int r = 0;
+        db_str_t key = {
+                .data = "asdf1234x",
+                .len = 9,
+        };
+        db_str_t val = {
+                .data = "1234asdf",
+                .len = 8,
+        };
+
+//        r = db_put(db, key, val);
+//        if (r != k_succ) {
+//            printf("err. db_put: %d\n", r);
+//        }
+
+        db_str_t val1;
+        r = db_get(db, key, &val1);
+        if (r != k_succ) {
+            printf("err. db_get: %d\n", r);
+        } else {
+            printf("db_get. val: %ld %s\n", val1.len, val1.data);
+        }
+    }
+
+    if (k_succ != db_close(db)) {
         exitErr(-1);
     }
 }
 
 int main() {
-    t_hmap();
+    t_db_reload();
     printf("%s\n", "hello");
 }

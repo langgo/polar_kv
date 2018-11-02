@@ -149,3 +149,80 @@ int logstore_read_record(logstore_t *logstore, off_t location, logrecord_t *logr
     return 0;
 }
 
+// Note: 这里假设 record 的最大长度小雨 buf_size-4
+int logstore_iter_new(logstore_t *logstore, size_t buf_size, logstore_iter_t **p_iter) {
+    char *buf = malloc(sizeof(char) * buf_size);
+    if (buf == NULL) {
+        return -1;
+    }
+    logstore_iter_t *iter = malloc(sizeof(logstore_iter_t));
+    if (iter == NULL) {
+        return -1;
+    }
+
+    iter->logstore = logstore;
+    iter->offset = 0;
+    iter->buf_size = buf_size;
+    iter->buf_len = 0;
+    iter->buf_off = 0;
+    iter->buf = buf;
+
+    *p_iter = iter;
+    return 0;
+}
+
+void logstore_iter_delete(logstore_iter_t *iter) {
+    free(iter->buf);
+    free(iter);
+}
+
+
+int _logstore_iter_reread(logstore_iter_t *iter) {
+    iter->buf_len = 0;
+    iter->buf_off = 0;
+
+    size_t size = iter->buf_size;
+    while (size > 0) {
+        ssize_t n = pread(iter->logstore->fd, iter->buf + iter->buf_len, size, iter->offset);
+        if (n == -1) {
+            return -1;
+        }
+        if (n == 0) {
+            break;
+        }
+        size -= n;
+        iter->buf_len += n;
+        iter->offset += n;
+    }
+    return 0;
+}
+
+// -2 EOF
+int logstore_iter_next(logstore_iter_t *iter, logrecord_t *p_record, off_t *p_location) {
+    if (iter->buf_len - iter->buf_off < 4) {
+        iter->buf_len = 0;
+        iter->buf_off = 0;
+
+        if (-1 == _logstore_iter_reread(iter)) {
+            return -1;
+        }
+
+        if (iter->buf_len == 0) {
+            return -2;
+        }
+    }
+
+    uint32_t len = decode_fixed32(iter->buf + iter->buf_off);
+    if (iter->buf_len - iter->buf_off < len) {
+        iter->offset -= len + 4;
+        _logstore_iter_reread(iter);
+    }
+
+    p_record->size = len;
+    p_record->buf = iter->buf + iter->buf_off + 4; // Note: 避免copy
+
+    *p_location = (off_t) (iter->offset - (iter->buf_len - iter->buf_off));
+    iter->buf_off += len + 4;
+    return 0;
+}
+

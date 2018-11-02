@@ -4,38 +4,69 @@
 #include "logstore.h"
 #include "coding.h"
 
-ret_code_t db_init() {
+ret_code_t db_init(db_t *db) {
+    db->logstore;
 
+    logstore_iter_t *iter;
+    if (-1 == logstore_iter_new(db->logstore, 1024 * 1024, &iter)) {
+        return k_out_of_memory;
+    }
+
+    while (1) {
+        logrecord_t logrecord;
+        off_t location;
+
+        int r = logstore_iter_next(iter, &logrecord, &location);
+        if (-1 == r) {
+            return k_io_error;
+        }
+        if (-2 == r) {
+            break;
+        }
+
+        int key_len = decode_fixed32(logrecord.buf);
+
+        if (-1 == hmap_set(db->hmap, logrecord.buf + 4, key_len, location)) {
+            return k_out_of_memory;
+        }
+    }
+
+    return k_succ;
 }
 
 ret_code_t db_open(char *dir, db_t **p_db) {
     hmap_t *hmap;
     if (-1 == hmap_new(1024, &hmap)) {
-        return e_out_of_memory;
+        return k_out_of_memory;
     }
     logstore_t *logstore;
     if (-1 == logstore_new(dir, &logstore)) {
-        return e_io_error;
+        return k_io_error;
     }
 
     db_t *db = malloc(sizeof(db));
     if (db == NULL) {
-        return e_out_of_memory;
+        return k_out_of_memory;
     }
     db->logstore = logstore;
     db->hmap = hmap;
 
+    ret_code_t r = db_init(db);
+    if (r != k_succ) {
+        return r;
+    }
+
     *p_db = db;
-    return e_succ;
+    return k_succ;
 }
 
 ret_code_t db_close(db_t *db) {
     hmap_delete(db->hmap);
     if (-1 == logstore_delete(db->logstore)) {
-        return e_all;
+        return k_all;
     }
     free(db);
-    return e_succ;
+    return k_succ;
 }
 
 ret_code_t db_put(db_t *db, db_str_t key, db_str_t val) {
@@ -44,7 +75,7 @@ ret_code_t db_put(db_t *db, db_str_t key, db_str_t val) {
     logrecord_t logrecord;
     logrecord.buf = malloc(sizeof(char) * (4 + key.len + 4 + val.len));
     if (logrecord.buf == NULL) {
-        return e_out_of_memory;
+        return k_out_of_memory;
     }
 
     int bufix = 0;
@@ -61,30 +92,30 @@ ret_code_t db_put(db_t *db, db_str_t key, db_str_t val) {
 
     off_t offset = 0;
     if (-1 == logstore_add_record(db->logstore, logrecord, &offset)) {
-        return e_all;
+        return k_all;
     }
 
     free(logrecord.buf);
-//    if (-1 == hmap_set(db->hmap, key.data, key.len, offset)) {
-//        return e_all;
-//    }
-    return e_succ;
+    if (-1 == hmap_set(db->hmap, key.data, key.len, offset)) {
+        return k_all;
+    }
+    return k_succ;
 }
 
 ret_code_t db_get(db_t *db, db_str_t key, db_str_t *val) {
     off_t offset = 0;
     int r = hmap_get(db->hmap, key.data, key.len, &offset);
     if (r == -1) {
-        return e_all;
+        return k_all;
     }
     if (r == -2) {
-        return e_not_found;
+        return k_not_found;
     }
 
     logrecord_t logrecord;
     r = logstore_read_record(db->logstore, offset, &logrecord);
     if (r == -1) {
-        return e_all;
+        return k_all;
     }
 
     int key_len = decode_fixed32(logrecord.buf);
@@ -92,10 +123,10 @@ ret_code_t db_get(db_t *db, db_str_t key, db_str_t *val) {
 
     val->data = malloc(sizeof(char) * val->len);
     if (val->data == NULL) {
-        return e_out_of_memory;
+        return k_out_of_memory;
     }
     memcpy(val->data, logrecord.buf + 4 + key_len + 4, val->len);
     free(logrecord.buf);
 
-    return e_not_supported;
+    return k_succ;
 }
