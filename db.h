@@ -8,6 +8,7 @@
 typedef struct {
     logstore_t *logstore;
     hmap_t *hmap;
+    uint64_t count;
 } db_t;
 
 typedef struct {

@@ -65,7 +65,7 @@ int logstore_delete(logstore_t *logstore) {
     return 0;
 }
 
-int logstore_add_record(logstore_t *logstore, logrecord_t logrecord, size_t *p_location) {
+int logstore_add_record(logstore_t *logstore, logrecord_t logrecord, uint64_t *p_location) {
     {
         writer_t *writer = logstore->writer;
 
@@ -100,7 +100,7 @@ int logstore_add_record(logstore_t *logstore, logrecord_t logrecord, size_t *p_l
     return 0;
 }
 
-int logstore_read_record(logstore_t *logstore, off_t location, logrecord_t *logrecord) {
+int logstore_read_record(logstore_t *logstore, uint64_t location, logrecord_t *logrecord) {
     int rfd = logstore->fd;
 
     // TODO 如果能够知道value的长度，就不需要多读了。
@@ -119,7 +119,7 @@ int logstore_read_record(logstore_t *logstore, off_t location, logrecord_t *logr
 
     // 解析 record 的长度
 
-    uint32_t length = decode_fixed32(logstore->readbuf);
+    uint32_t length = decode_fixed32((const char *) logstore->readbuf);
 
     char *content = malloc(sizeof(char) * length);
     if (content == NULL) {
@@ -198,11 +198,8 @@ int _logstore_iter_reread(logstore_iter_t *iter) {
 }
 
 // -2 EOF
-int logstore_iter_next(logstore_iter_t *iter, logrecord_t *p_record, off_t *p_location) {
+int logstore_iter_next(logstore_iter_t *iter, logrecord_t *p_record, uint64_t *p_location) {
     if (iter->buf_len - iter->buf_off < 4) {
-        iter->buf_len = 0;
-        iter->buf_off = 0;
-
         if (-1 == _logstore_iter_reread(iter)) {
             return -1;
         }
@@ -213,15 +210,15 @@ int logstore_iter_next(logstore_iter_t *iter, logrecord_t *p_record, off_t *p_lo
     }
 
     uint32_t len = decode_fixed32(iter->buf + iter->buf_off);
-    if (iter->buf_len - iter->buf_off < len) {
-        iter->offset -= len + 4;
+    if (iter->buf_len - iter->buf_off - 4 < len) {
+        iter->offset -= iter->buf_len - iter->buf_off;
         _logstore_iter_reread(iter);
     }
 
     p_record->size = len;
     p_record->buf = iter->buf + iter->buf_off + 4; // Note: 避免copy
 
-    *p_location = (off_t) (iter->offset - (iter->buf_len - iter->buf_off));
+    *p_location = iter->offset - (iter->buf_len - iter->buf_off);
     iter->buf_off += len + 4;
     return 0;
 }

@@ -32,10 +32,10 @@ int hmap_new(uint64_t size, hmap_t **p_hmap);
 
 void hmap_delete(hmap_t *hmap);
 
-int hmap_set(hmap_t *hmap, char *key, int key_len, uint64_t value);
+int hmap_set(hmap_t *hmap, char *key, uint16_t key_len, uint64_t value);
 
-int hmap_get(hmap_t *hmap, char *key, int key_len, uint64_t *p_value);
+int hmap_get(hmap_t *hmap, char *key, uint16_t key_len, uint64_t *p_value);
 
-int hmap_del(hmap_t *hmap, char *key, int key_len);
+int hmap_del(hmap_t *hmap, char *key, uint16_t key_len);
 
 #endif //POLAR_KV_HASH_MAP_H

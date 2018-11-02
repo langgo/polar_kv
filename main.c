@@ -59,12 +59,12 @@ void t_logstore() {
                 .size = strlen(buf),
         };
 
-        size_t l;
+        uint64_t l;
         if (-1 == logstore_add_record(logstore, logrecord, &l)) {
             printf("%s\n", strerror(errno));
             exit(-1);
         }
-        printf("l1: %ld\n", l);
+        printf("l1: %lld\n", l);
     }
 
     {
@@ -74,12 +74,12 @@ void t_logstore() {
                 .size = strlen(buf),
         };
 
-        size_t l;
+        uint64_t l;
         if (-1 == logstore_add_record(logstore, logrecord, &l)) {
             printf("%s\n", strerror(errno));
             exit(-1);
         }
-        printf("l1: %ld\n", l);
+        printf("l1: %lld\n", l);
 
         logrecord_t logrecord1;
         if (-1 == logstore_read_record(logstore, l, &logrecord1)) {
@@ -177,9 +177,9 @@ void t_hmap() {
     hmap_delete(hmap);
 }
 
-void t_db() {
+static void t_db() {
     db_t *db;
-    if (k_succ == db_open("/tmp/polar_kv", &db)) {
+    if (k_succ != db_open("/tmp/polar_kv", &db)) {
         exitErr(-1);
     }
 
@@ -196,19 +196,19 @@ void t_db() {
         };
 
         r = db_put(db, key, val);
-        if (r != 0) {
+        if (r != k_succ) {
             printf("db_put: %d\n", r);
         }
 
         db_str_t val1;
         r = db_get(db, key, &val1);
-        if (r != 0) {
+        if (r != k_succ) {
             printf("db_get: %d\n", r);
         }
         printf("db_get. val: %ld %s\n", val1.len, val1.data);
     }
 
-    if (k_succ == db_close(db)) {
+    if (k_succ != db_close(db)) {
         exitErr(-1);
     }
 }

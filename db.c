@@ -1,12 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "db.h"
 #include "logstore.h"
 #include "coding.h"
 
 ret_code_t db_init(db_t *db) {
-    db->logstore;
-
     logstore_iter_t *iter;
     if (-1 == logstore_iter_new(db->logstore, 1024 * 1024, &iter)) {
         return k_out_of_memory;
@@ -14,7 +13,7 @@ ret_code_t db_init(db_t *db) {
 
     while (1) {
         logrecord_t logrecord;
-        off_t location;
+        uint64_t location;
 
         int r = logstore_iter_next(iter, &logrecord, &location);
         if (-1 == r) {
@@ -29,6 +28,7 @@ ret_code_t db_init(db_t *db) {
         if (-1 == hmap_set(db->hmap, logrecord.buf + 4, key_len, location)) {
             return k_out_of_memory;
         }
+        db->count++;
     }
 
     return k_succ;
@@ -36,7 +36,7 @@ ret_code_t db_init(db_t *db) {
 
 ret_code_t db_open(char *dir, db_t **p_db) {
     hmap_t *hmap;
-    if (-1 == hmap_new(1024, &hmap)) {
+    if (-1 == hmap_new(4096, &hmap)) {
         return k_out_of_memory;
     }
     logstore_t *logstore;
@@ -44,12 +44,13 @@ ret_code_t db_open(char *dir, db_t **p_db) {
         return k_io_error;
     }
 
-    db_t *db = malloc(sizeof(db));
+    db_t *db = malloc(sizeof(db_t));
     if (db == NULL) {
         return k_out_of_memory;
     }
     db->logstore = logstore;
     db->hmap = hmap;
+    db->count = 0;
 
     ret_code_t r = db_init(db);
     if (r != k_succ) {
@@ -70,6 +71,9 @@ ret_code_t db_close(db_t *db) {
 }
 
 ret_code_t db_put(db_t *db, db_str_t key, db_str_t val) {
+    assert(key.len < ((1 << 16) - 1));
+    assert(val.len < ((1 << 20) - 4));
+
     // TODO 避免复制
 
     logrecord_t logrecord;
@@ -79,32 +83,33 @@ ret_code_t db_put(db_t *db, db_str_t key, db_str_t val) {
     }
 
     int bufix = 0;
-    encode_fixed32(logrecord.buf + bufix, key.len);
+    encode_fixed32(logrecord.buf + bufix, (uint32_t) key.len);
     bufix += 4;
     memcpy(logrecord.buf + bufix, key.data, key.len);
     bufix += key.len;
-    encode_fixed32(logrecord.buf + bufix, val.len);
+    encode_fixed32(logrecord.buf + bufix, (uint32_t) val.len);
     bufix += 4;
     memcpy(logrecord.buf + bufix, val.data, val.len);
     bufix += val.len;
 
     logrecord.size = bufix;
 
-    off_t offset = 0;
-    if (-1 == logstore_add_record(db->logstore, logrecord, &offset)) {
+    uint64_t location = 0;
+    if (-1 == logstore_add_record(db->logstore, logrecord, &location)) {
         return k_all;
     }
 
     free(logrecord.buf);
-    if (-1 == hmap_set(db->hmap, key.data, key.len, offset)) {
+    if (-1 == hmap_set(db->hmap, key.data, key.len, location)) {
         return k_all;
     }
+    db->count++;
     return k_succ;
 }
 
 ret_code_t db_get(db_t *db, db_str_t key, db_str_t *val) {
-    off_t offset = 0;
-    int r = hmap_get(db->hmap, key.data, key.len, &offset);
+    uint64_t location = 0;
+    int r = hmap_get(db->hmap, key.data, key.len, &location);
     if (r == -1) {
         return k_all;
     }
@@ -113,7 +118,7 @@ ret_code_t db_get(db_t *db, db_str_t key, db_str_t *val) {
     }
 
     logrecord_t logrecord;
-    r = logstore_read_record(db->logstore, offset, &logrecord);
+    r = logstore_read_record(db->logstore, location, &logrecord);
     if (r == -1) {
         return k_all;
     }
