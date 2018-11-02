@@ -47,6 +47,18 @@ void hmap_delete(hmap_t *hmap) {
         hmap_item_t *item = hmap->items[i];
         while (item != NULL) {
             hmap_item_t *next = item->next;
+
+            /*
+            for (int i = 0; i < HMAP_ITEM_SIZE; ++i) {
+                if (item->tops[i] >= minTopHash) {
+                    int _len = (uint16_t) (item->vals[i] >> 48);
+                    if (_len > 8) {
+                        free((char *) item->keys[i]);
+                    }
+                }
+            }
+             */
+
             free(item);
             item = next;
         }
@@ -55,7 +67,9 @@ void hmap_delete(hmap_t *hmap) {
     free(hmap);
 }
 
-int hmap_set(hmap_t *hmap, char *key, int key_len, uint64_t value) {
+static void hmap_g(hmap_t *hmap, char *key, int key_len, uint64_t value,
+                   int *p_index, uint8_t *p_top, uint64_t *p_nkey, uint64_t *p_nval) {
+
     uint64_t hash = siphash(key, key_len, seed);
     int index = (int) (hash & hmap->sizemask);
     uint8_t top = (uint8_t) (hash >> (sizeof(uint64_t) - 8));
@@ -63,20 +77,50 @@ int hmap_set(hmap_t *hmap, char *key, int key_len, uint64_t value) {
         top += minTopHash;
     }
 
+    uint64_t a = 1;
+    assert(key_len < ((a << 16) - 1));
+    assert(value < ((a << 48) - 1));
+
+    uint64_t nkey = 0;
+    if (key_len <= 8) {
+        for (int i = 0; i < key_len; ++i) {
+            uint64_t tmp = (uint64_t) key[i];
+            nkey = nkey | (tmp << 8 * i);
+        }
+        // free(key); // free
+    } else {
+        nkey = (uint64_t) key;
+    }
+
+    *p_index = index;
+    *p_top = top;
+    *p_nkey = nkey;
+    if (p_nval != NULL) {
+        *p_nval = (uint64_t) (key_len) << 48 | value; // 16 + 48;
+    }
+}
+
+int hmap_set(hmap_t *hmap, char *key, int key_len, uint64_t value) {
+    int index;
+    uint8_t top;
+    uint64_t nkey;
+    uint64_t nval;
+    hmap_g(hmap, key, key_len, value, &index, &top, &nkey, &nval);
+
     hmap_item_t *prev = NULL;
     hmap_item_t *item = hmap->items[index];
     while (item != NULL) {
         for (int i = 0; i < HMAP_ITEM_SIZE; ++i) {
-            if (item->tops[i] == top) {
-                if (item->keys[i] == *(uint64_t *) (key)) {
-                    item->vals[i] = value;
+            int _len = (uint16_t) (item->vals[i] >> 48);
+            if (item->tops[i] == top && _len == key_len) {
+                if (_len <= 8 && item->keys[i] == nkey || memcmp((char *) item->keys[i], (char *) nkey, _len) == 0) {
+                    item->vals[i] = nval;
                     return 0;
                 }
             } else if (item->tops[i] == topEmpty) {
-                assert(key_len == 8);
                 item->tops[i] = top;
-                item->keys[i] = *(uint64_t *) (key);
-                item->vals[i] = value;
+                item->keys[i] = nkey;
+                item->vals[i] = nval;
                 return 0;
             }
         }
@@ -96,32 +140,27 @@ int hmap_set(hmap_t *hmap, char *key, int key_len, uint64_t value) {
         hmap->items[index] = nitem;
     }
     nitem->tops[0] = top;
-    nitem->keys[0] = *(uint64_t *) (key);
-    nitem->vals[0] = value;
+    nitem->keys[0] = nkey;
+    nitem->vals[0] = nval;
 
     return 0;
 }
 
 // -2 not found
 int hmap_get(hmap_t *hmap, char *key, int key_len, uint64_t *p_value) {
-    uint64_t hash = siphash(key, key_len, seed);
-    int index = (int) (hash & hmap->sizemask);
-    uint8_t top = (uint8_t) (hash >> (sizeof(uint64_t) - 8));
-    if (top < minTopHash) {
-        top += minTopHash;
-    }
+    int index;
+    uint8_t top;
+    uint64_t nkey;
+    hmap_g(hmap, key, key_len, 0, &index, &top, &nkey, NULL);
 
     hmap_item_t *item = hmap->items[index];
     while (item != NULL) {
         for (int i = 0; i < HMAP_ITEM_SIZE; ++i) {
-            if (item->tops[i] == top) {
-                // TODO 这里先假设所有的key都是 8B，如果大于8B，也要把key存储在 内存中，如果内存放不下。考虑第二种方案。
-                assert(key_len == 8);
-                if (key_len != 8) {
-                    printf("key_len != 8, %d\n", key_len);
-                }
-                if (item->keys[i] == *(uint64_t *) (key)) {
-                    *p_value = item->vals[i];
+            int _len = (uint16_t) (item->vals[i] >> 48);
+            if (item->tops[i] == top && _len == key_len) {
+                if (_len <= 8 && item->keys[i] == nkey || memcmp((char *) item->keys[i], (char *) nkey, _len) == 0) {
+                    uint64_t tmp = item->vals[i];
+                    *p_value = tmp << 16 >> 16;
                     return 0;
                 }
             }
@@ -130,3 +169,6 @@ int hmap_get(hmap_t *hmap, char *key, int key_len, uint64_t *p_value) {
     }
     return -2;
 }
+
+// TODO 这里的key怎么释放。由用户决定。意思是，它需要遍历，然后释放内存。
+

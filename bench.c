@@ -47,8 +47,14 @@ void t_db() {
     const int count = 10 * 10000;
     pair_t *pairs = malloc(sizeof(pair_t) * count);
     for (int i = 0; i < count; ++i) {
-        pairs[i].key.len = 8;
-        pairs[i].key.data = randString(8);
+        if (i % 100 == 1) {
+            pairs[i].key.len = 16;
+            pairs[i].key.data = randString(16);
+        } else {
+            pairs[i].key.len = 8;
+            pairs[i].key.data = randString(8);
+        }
+
         pairs[i].val.len = 4 * 1024;
         pairs[i].val.data = randString(4 * 1024);
     }

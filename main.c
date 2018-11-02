@@ -99,7 +99,7 @@ void t_hmap() {
     if (-1 == hmap_new(8, &hmap)) {
         exitErr(-1);
     }
-/*
+
     {
         uint64_t key = 1234;
         uint64_t val = 0;
@@ -112,21 +112,21 @@ void t_hmap() {
 
     {
         int r = 0;
-        uint64_t key = 1234;
+        char key[] = "12345678a";
         uint64_t val = 123456;
 
-        r = hmap_set(hmap, (char *) (&key), 8, val);
+        r = hmap_set(hmap, key, 9, val);
         if (r == -1) {
             exitErr(-1);
         }
 
         uint64_t nval = 0;
-        r = hmap_get(hmap, (char *) (&key), 8, &nval);
+        r = hmap_get(hmap, key, 9, &nval);
         if (r == -1) {
             exitErr(-1);
         }
         printf("hmap_get: %d\n", nval);
-    }*/
+    }
 
     {
         int r = 0;
@@ -177,7 +177,6 @@ void t_hmap() {
     hmap_delete(hmap);
 }
 
-
 void t_db() {
     db_t *db;
     if (-1 == db_open("/tmp/polar_kv", &db)) {
@@ -215,6 +214,6 @@ void t_db() {
 }
 
 int main() {
-    t_db();
+    t_hmap();
     printf("%s\n", "hello");
 }
