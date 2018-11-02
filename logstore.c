@@ -176,7 +176,6 @@ void logstore_iter_delete(logstore_iter_t *iter) {
     free(iter);
 }
 
-
 int _logstore_iter_reread(logstore_iter_t *iter) {
     iter->buf_len = 0;
     iter->buf_off = 0;

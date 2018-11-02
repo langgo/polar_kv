@@ -4,14 +4,14 @@
 #include <string.h>
 #include "hash_map.h"
 
-uint64_t siphash(const uint8_t *in, const size_t inlen, const uint8_t *k);
+uint64_t siphash(const uint8_t *in, size_t inlen, const uint8_t *k);
 
 const uint8_t seed[17] = "0123456789abcdef";
 
 const uint8_t topEmpty = 0;
 const uint8_t minTopHash = 1;
 
-uint64_t _next_power(int size) {
+uint64_t _next_power(uint64_t size) {
     uint64_t i = 4; // TODO
     while (1) {
         if (i >= size) {
@@ -116,7 +116,7 @@ int hmap_set(hmap_t *hmap, char *key, uint16_t key_len, uint64_t value) {
     hmap_item_t *item = hmap->items[index];
     while (item != NULL) {
         for (int i = 0; i < HMAP_ITEM_SIZE; ++i) {
-            int _len = (uint16_t) (item->vals[i] >> 48);
+            uint16_t _len = (uint16_t) (item->vals[i] >> 48);
             if (item->tops[i] == top && _len == key_len) {
                 if ((_len <= 8 && item->keys[i] == nkey) ||
                     (_len > 8 && memcmp((char *) item->keys[i], (char *) nkey, _len) == 0)) {
@@ -162,7 +162,7 @@ int hmap_get(hmap_t *hmap, char *key, uint16_t key_len, uint64_t *p_value) {
     hmap_item_t *item = hmap->items[index];
     while (item != NULL) {
         for (int i = 0; i < HMAP_ITEM_SIZE; ++i) {
-            int _len = (uint16_t) (item->vals[i] >> 48);
+            uint16_t _len = (uint16_t) (item->vals[i] >> 48);
             if (item->tops[i] == top && _len == key_len) {
                 if ((_len <= 8 && item->keys[i] == nkey) ||
                     (_len > 8 && memcmp((char *) item->keys[i], (char *) nkey, _len) == 0)) {

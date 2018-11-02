@@ -80,7 +80,7 @@ static void t_db() {
     }
 
     // 3. 测试过程
-    if (0) { // write
+    if (1) { // write
         struct timeval t1, t2;
         gettimeofday(&t1, NULL);
 

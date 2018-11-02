@@ -23,13 +23,15 @@ ret_code_t db_init(db_t *db) {
             break;
         }
 
-        int key_len = decode_fixed32(logrecord.buf);
+        uint16_t key_len = (uint16_t) decode_fixed32(logrecord.buf);
 
         if (-1 == hmap_set(db->hmap, logrecord.buf + 4, key_len, location)) {
             return k_out_of_memory;
         }
         db->count++;
     }
+
+    logstore_iter_delete(iter);
 
     return k_succ;
 }
