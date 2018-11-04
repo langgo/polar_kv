@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <unistd.h>
+#include <stdint.h>
 
 #ifndef HMAP_ITEM_SIZE
 #define HMAP_ITEM_SIZE (8)

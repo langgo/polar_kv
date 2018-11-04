@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <sys/time.h>
 #include "io.h"
 #include "logstore.h"

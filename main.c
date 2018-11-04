@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <stdint.h>
 #include <unistd.h>
 #include "io.h"
 #include "logstore.h"

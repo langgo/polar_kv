@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
 #include <unistd.h>
 
 void encode_fixed32(char *buf, uint32_t value);

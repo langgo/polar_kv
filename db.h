@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <unistd.h>
+#include <stdint.h>
 #include "logstore.h"
 #include "hash_map.h"
 
